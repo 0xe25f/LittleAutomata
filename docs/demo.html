@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>LittleAutomata &mdash; Playable Demo</title>
+<meta name="description" content="Interactive falling-sand style sandbox built with the LittleAutomata granular cellular automata plugin for the LittleJS game engine.">
+<style>
+  :root {
+    color-scheme: dark;
+    --panel-bg: rgba(18, 20, 26, 0.88);
+    --panel-border: rgba(255, 255, 255, 0.12);
+    --text: #e8ecf4;
+    --text-dim: #9aa3b5;
+    --accent: #5ec8ff;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #05070c;
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas { display: block; }
+  #ui {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--panel-bg);
+    border-top: 1px solid var(--panel-border);
+    backdrop-filter: blur(6px);
+    z-index: 10;
+    font-size: 13px;
+  }
+  #palette { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 9px;
+    border-radius: 7px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+  }
+  .swatch:hover { background: rgba(255, 255, 255, 0.09); }
+  .swatch.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .swatch .dot { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.25); }
+  .sep { width: 1px; align-self: stretch; background: var(--panel-border); margin: 2px 4px; }
+  .btn {
+    padding: 6px 11px;
+    border-radius: 7px;
+    border: 1px solid var(--panel-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .btn:hover { background: rgba(255, 255, 255, 0.13); }
+  .btn.warn:hover { background: rgba(255, 90, 90, 0.25); border-color: #ff8a8a; }
+  #brushRow { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+  #brushRow input[type="range"] { width: 90px; }
+  #info {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 10;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 9px;
+    padding: 10px 14px;
+    max-width: 300px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-dim);
+    backdrop-filter: blur(6px);
+  }
+  #info strong { color: var(--text); }
+  #info kbd {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 4px;
+    padding: 0 5px;
+    font-size: 11px;
+    color: var(--text);
+  }
+  #stats {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 9px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: right;
+    backdrop-filter: blur(6px);
+    white-space: pre;
+  }
+  #toast {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-140%);
+    z-index: 20;
+    background: rgba(30, 34, 44, 0.95);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.25s ease, opacity 0.25s ease, visibility 0s linear 0.25s;
+    pointer-events: none;
+  }
+  #toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    visibility: visible;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  a.home { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div id="info">
+  <strong>LittleAutomata</strong> playable demo &middot; <a class="home" href="./index.html">&larr; back to docs</a><br>
+  <kbd>Move</kbd> WASD / Arrows &nbsp; <kbd>Jump</kbd> Space<br>
+  <kbd>Paint</kbd> Left click + drag &nbsp; <kbd>Explode</kbd> Right click<br>
+  <kbd>1-9</kbd> pick material &nbsp; <kbd>R</kbd> reset
+</div>
+
+<div id="stats">loading&hellip;</div>
+<div id="toast"></div>
+
+<div id="ui">
+  <div id="palette"></div>
+  <div class="sep"></div>
+  <div id="brushRow">
+    brush
+    <input id="brushSize" type="range" min="0.08" max="1.4" step="0.02" value="0.35">
+  </div>
+  <div class="sep"></div>
+  <button class="btn" id="btnExplode">Explode centre</button>
+  <button class="btn" id="btnSave">Save</button>
+  <button class="btn" id="btnLoad">Load</button>
+  <button class="btn warn" id="btnReset">Reset world</button>
+</div>
+
+<!-- LittleJS is loaded first as a classic global script; it attaches engineInit, vec2,
+     EngineObject, cameraPos, mainContext, mouseIsDown, keyIsDown, etc. to the window, which the
+     LittleAutomata module below references as ambient globals. -->
+<script src="./lib/littlejs.min.js"></script>
+<script type="module">
+import * as LA from './littleautomata.js';
+
+const GRID_WIDTH = 192;
+const GRID_HEIGHT = 108;
+const PIXELS_PER_UNIT = 16;
+const WORLD_WIDTH = GRID_WIDTH / PIXELS_PER_UNIT;
+const WORLD_HEIGHT = GRID_HEIGHT / PIXELS_PER_UNIT;
+const ORIGIN_X = -WORLD_WIDTH / 2;
+const ORIGIN_Y = -WORLD_HEIGHT / 2;
+const MAX_WALK_SPEED = 0.12;
+
+const PALETTE = [
+  { id: LA.MaterialId.AIR, name: 'Erase', colour: '#00000000' },
+  { id: LA.MaterialId.SAND, name: 'Sand', colour: '#D4A359' },
+  { id: LA.MaterialId.WATER, name: 'Water', colour: '#2E72D2' },
+  { id: LA.MaterialId.OIL, name: 'Oil', colour: '#3B3426' },
+  { id: LA.MaterialId.FIRE, name: 'Fire', colour: '#FF5722' },
+  { id: LA.MaterialId.SMOKE, name: 'Smoke', colour: '#616161' },
+  { id: LA.MaterialId.ACID, name: 'Acid', colour: '#76FF03' },
+  { id: LA.MaterialId.STONE, name: 'Stone', colour: '#70737C' },
+  { id: LA.MaterialId.BEDROCK, name: 'Bedrock', colour: '#2B2B2B' }
+];
+
+let currentMaterial = LA.MaterialId.SAND;
+let brushRadius = 0.35;
+let pointerOverUi = false;
+let player = null;
+
+/** A tiny playable character showcasing GranularPhysicsBridge ground contact and buoyancy. */
+class Player extends EngineObject {
+  constructor(pos) {
+    super(pos, vec2(0.34, 0.62), undefined, 0, rgb(0.32, 0.95, 1));
+  }
+
+  update() {
+    const moveAccel = 0.025;
+    if (keyIsDown('ArrowLeft') || keyIsDown('KeyA')) this.velocity.x -= moveAccel;
+    if (keyIsDown('ArrowRight') || keyIsDown('KeyD')) this.velocity.x += moveAccel;
+    // LittleJS's own default speed clamp (objectMaxSpeed, 1 world unit per frame = 60/s) is far
+    // too generous for this small 12-unit-wide world, so cap walking speed to something sane.
+    this.velocity.x = Math.max(-MAX_WALK_SPEED, Math.min(MAX_WALK_SPEED, this.velocity.x));
+    if ((keyIsDown('ArrowUp') || keyIsDown('KeyW') || keyIsDown('Space')) && this.groundObject) {
+      this.velocity.y = 0.36;
+    }
+    super.update();
+    // Resolve terrain contact AFTER LittleJS's own physics step, matching the documented
+    // integration pattern: super.update() resets groundObject each frame before we set it.
+    LA.GranularPhysicsBridge.resolveEntityCollision(this);
+    this.velocity.x *= 0.9;
+  }
+}
+
+function buildInitialTerrain() {
+  const bottom = ORIGIN_Y;
+  LA.paintLine(ORIGIN_X, bottom, ORIGIN_X + WORLD_WIDTH, bottom, 0.12, LA.MaterialId.BEDROCK);
+  LA.paintLine(ORIGIN_X, bottom + 0.35, ORIGIN_X + WORLD_WIDTH, bottom + 0.35, 0.35, LA.MaterialId.STONE);
+  LA.paintLine(-1.5, bottom + 1.6, 2.5, bottom + 1.6, 0.14, LA.MaterialId.STONE);
+  LA.paintCircle(ORIGIN_X + 2.6, bottom + 1.1, 1.15, LA.MaterialId.WATER);
+  LA.paintCircle(ORIGIN_X + WORLD_WIDTH - 2.4, bottom + 1.9, 1.05, LA.MaterialId.SAND);
+  LA.paintCircle(0.5, bottom + 3.4, 0.55, LA.MaterialId.OIL);
+}
+
+function resetWorld() {
+  LA.initGranularEngine({
+    gridWidth: GRID_WIDTH, gridHeight: GRID_HEIGHT, pixelsPerUnit: PIXELS_PER_UNIT,
+    originX: ORIGIN_X, originY: ORIGIN_Y, subSteps: 1
+  });
+  buildInitialTerrain();
+  if (player) player.pos = vec2(0, 2);
+}
+
+function gameInit() {
+  setGravity(vec2(0, -0.018));
+  resetWorld();
+  player = new Player(vec2(0, 2));
+  buildPalette();
+  wireUi();
+}
+
+function fitCameraToGrid() {
+  if (!mainCanvasSize.x || !mainCanvasSize.y) return;
+  const scale = Math.min(mainCanvasSize.x / WORLD_WIDTH, mainCanvasSize.y / WORLD_HEIGHT) * 0.94;
+  setCameraScale(scale);
+  setCameraPos(vec2(ORIGIN_X + WORLD_WIDTH / 2, ORIGIN_Y + WORLD_HEIGHT / 2));
+}
+
+let lastStatsUpdate = 0;
+let frameCounter = 0;
+let measuredFps = 0;
+let lastFpsSampleMs = performance.now();
+
+function gameUpdate() {
+  fitCameraToGrid();
+  LA.updateGranularEngine();
+
+  if (!pointerOverUi) {
+    if (mouseIsDown(0)) LA.paintCircle(mousePos.x, mousePos.y, brushRadius, currentMaterial);
+    if (mouseWasPressed(2)) LA.createExplosion(mousePos.x, mousePos.y, 1.1, 1.6);
+  }
+
+  for (let i = 0; i < PALETTE.length; i++) {
+    if (keyWasPressed('Digit' + (i + 1))) selectMaterial(PALETTE[i].id);
+  }
+  if (keyWasPressed('KeyR')) resetWorld();
+
+  frameCounter++;
+  const nowMs = performance.now();
+  if (nowMs - lastFpsSampleMs > 500) {
+    measuredFps = (frameCounter * 1000) / (nowMs - lastFpsSampleMs);
+    frameCounter = 0;
+    lastFpsSampleMs = nowMs;
+  }
+
+  if (time - lastStatsUpdate > 0.2) {
+    lastStatsUpdate = time;
+    const engine = LA.granularEngine;
+    const activeChunks = engine ? engine.chunks.activeCount : 0;
+    const totalChunks = engine ? engine.chunks.totalChunks : 0;
+    document.getElementById('stats').textContent =
+      `FPS ${measuredFps.toFixed(0)}\nactive chunks ${activeChunks} / ${totalChunks}\nrenderer ${engine ? engine.rendererMode : '-'}`;
+  }
+}
+
+function gameRenderPost() {
+  LA.renderGranularEngine();
+}
+
+function buildPalette() {
+  const root = document.getElementById('palette');
+  root.innerHTML = '';
+  for (const item of PALETTE) {
+    const button = document.createElement('button');
+    button.className = 'swatch' + (item.id === currentMaterial ? ' active' : '');
+    button.dataset.materialId = String(item.id);
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = item.colour === '#00000000' ? 'repeating-conic-gradient(#444 0% 25%, #222 0% 50%) 50% / 6px 6px' : item.colour;
+    button.appendChild(dot);
+    button.appendChild(document.createTextNode(item.name));
+    button.addEventListener('click', () => selectMaterial(item.id));
+    root.appendChild(button);
+  }
+}
+
+function selectMaterial(materialId) {
+  currentMaterial = materialId;
+  for (const button of document.querySelectorAll('.swatch')) {
+    button.classList.toggle('active', Number(button.dataset.materialId) === materialId);
+  }
+}
+
+let toastTimer = null;
+function flashMessage(text) {
+  const toast = document.getElementById('toast');
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
+}
+
+function saveWorld() {
+  const bytes = LA.serializeGrid();
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  try {
+    localStorage.setItem('littleautomata-demo-save', btoa(binary));
+    flashMessage(`Saved (${bytes.length} bytes).`);
+  } catch (err) {
+    flashMessage('Could not save (storage unavailable).');
+  }
+}
+
+function loadWorld() {
+  const stored = localStorage.getItem('littleautomata-demo-save');
+  if (!stored) { flashMessage('No saved world found.'); return; }
+  const binary = atob(stored);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const ok = LA.deserializeGrid(bytes);
+  flashMessage(ok ? 'World loaded.' : 'Save data was invalid.');
+}
+
+function wireUi() {
+  const uiPanel = document.getElementById('ui');
+  uiPanel.addEventListener('pointerenter', () => { pointerOverUi = true; });
+  uiPanel.addEventListener('pointerleave', () => { pointerOverUi = false; });
+  document.getElementById('info').addEventListener('pointerenter', () => { pointerOverUi = true; });
+  document.getElementById('info').addEventListener('pointerleave', () => { pointerOverUi = false; });
+
+  document.getElementById('brushSize').addEventListener('input', (event) => {
+    brushRadius = Number(event.target.value);
+  });
+  document.getElementById('btnExplode').addEventListener('click', () => {
+    LA.createExplosion(ORIGIN_X + WORLD_WIDTH / 2, ORIGIN_Y + WORLD_HEIGHT / 2, 1.4, 2.0);
+  });
+  document.getElementById('btnSave').addEventListener('click', saveWorld);
+  document.getElementById('btnLoad').addEventListener('click', loadWorld);
+  document.getElementById('btnReset').addEventListener('click', resetWorld);
+
+  document.addEventListener('contextmenu', (event) => event.preventDefault());
+}
+
+engineInit(gameInit, gameUpdate, () => {}, () => {}, gameRenderPost);
+</script>
+</body>
+</html>

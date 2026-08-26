@@ -1,0 +1,41 @@
+{
+  "name": "littleautomata",
+  "version": "1.0.0",
+  "description": "Zero-dependency granular cellular automata simulation plugin for the LittleJS 2D game engine.",
+  "type": "module",
+  "main": "release/littleautomata.js",
+  "module": "release/littleautomata.js",
+  "types": "src/littleautomata.js",
+  "files": [
+    "release/littleautomata.js",
+    "src/littleautomata.js",
+    "LICENSE",
+    "ACKNOWLEDGEMENTS.md"
+  ],
+  "scripts": {
+    "build": "node tools/build-release.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "littlejs",
+    "cellular-automata",
+    "falling-sand",
+    "granular",
+    "simulation",
+    "game-engine"
+  ],
+  "author": "Agent 57951",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xe25f/LittleAutomata.git"
+  },
+  "homepage": "https://0xe25f.github.io/LittleAutomata",
+  "bugs": {
+    "url": "https://github.com/0xe25f/LittleAutomata/issues"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "terser": "^5.44.0"
+  }
+}

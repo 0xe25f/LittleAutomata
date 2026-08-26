@@ -1,0 +1,43 @@
+# http://editorconfig.org
+root = true
+
+# Global defaults for all files
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript / TypeScript source & declaration files
+# Indent size 2 per AGENTS.md 1.2 ("always use 2-space indentation never 4-space and never tabs").
+[*.{js,mjs,cjs,ts,d.ts}]
+indent_style = space
+indent_size = 2
+max_line_length = 137
+
+# Structured data & configuration files
+[*.{json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Web markup & stylesheets
+[*.{html,htm,css}]
+indent_style = space
+indent_size = 4
+
+# Documentation & Markdown files
+[*.md]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = false
+max_line_length = off
+
+# Binary & media assets (bypass text formatting)
+[*.{png,jpg,jpeg,gif,webp,ico,wasm,bin,dat,rle,wav,ogg,mp3,zip,tar.gz}]
+indent_style = unset
+indent_size = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset

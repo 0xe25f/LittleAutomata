@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>LittleAutomata &mdash; Custom Material Example</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #05070c; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #help {
+    position: fixed; top: 10px; left: 10px; z-index: 5;
+    font-size: 13px; color: #cfd6e4;
+    background: rgba(16, 20, 29, 0.85); border: 1px solid #232a38;
+    border-radius: 8px; padding: 8px 12px; line-height: 1.6;
+  }
+  kbd {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 4px; padding: 0 5px; font-size: 12px;
+  }
+  #guide {
+    position: fixed; top: 10px; right: 10px; z-index: 5;
+    width: min(440px, calc(100vw - 20px));
+    max-height: calc(100vh - 20px);
+    overflow: auto;
+    background: rgba(16, 20, 29, 0.92);
+    border: 1px solid #232a38;
+    border-radius: 10px;
+    color: #cfd6e4;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  #guide h2 {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #e8ecf4;
+    border-bottom: 1px solid #232a38;
+  }
+  details.accordion {
+    border-bottom: 1px solid #232a38;
+  }
+  details.accordion summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: #e8ecf4;
+    list-style: none;
+  }
+  details.accordion summary::-webkit-details-marker { display: none; }
+  details.accordion summary::before {
+    content: "▸ ";
+    color: #5ec8ff;
+  }
+  details.accordion[open] summary::before { content: "▾ "; }
+  details.accordion .panel {
+    padding: 0 14px 12px;
+  }
+  details.accordion p {
+    margin: 0 0 8px;
+    color: #9aa3b5;
+  }
+  pre {
+    margin: 0;
+    padding: 10px 12px;
+    background: #0a0d13;
+    border: 1px solid #232a38;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  code { font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+<div id="help">
+  <kbd>Left click</kbd> place Gunpowder &nbsp; <kbd>Right click</kbd> place a spark of Fire
+</div>
+
+<aside id="guide">
+  <h2>Custom Material Walkthrough</h2>
+
+  <details class="accordion" open>
+    <summary>Register a Custom Material</summary>
+    <div class="panel">
+      <p>Call <code>registerMaterial()</code> after <code>initGranularEngine()</code> to add Gunpowder at id 9.</p>
+      <pre><code>const GUNPOWDER_ID = registerMaterial({
+  id: 9,
+  name: 'Gunpowder',
+  archetype: Archetype.FALLING_SOLID,
+  density: 1300,
+  friction: 0.6,
+  flammability: 0.9,
+  baseColours: [0xFF454545, 0xFF383838, 0xFF2D2D2D]
+});</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Register a Reaction Rule</summary>
+    <div class="panel">
+      <p>Use <code>registerReaction()</code> so Fire touching Gunpowder yields more Fire with a 40-step lifetime.</p>
+      <pre><code>registerReaction(
+  MaterialId.FIRE,
+  GUNPOWDER_ID,
+  MaterialId.FIRE,
+  MaterialId.FIRE,
+  1.0,
+  40
+);</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Paint Gunpowder and Fire</summary>
+    <div class="panel">
+      <p>Left click deposits Gunpowder; right click places Fire to ignite the chain reaction.</p>
+      <pre><code>if (mouseIsDown(0)) {
+  paintCircle(mousePos.x, mousePos.y, 0.4, GUNPOWDER_ID);
+}
+if (mouseIsDown(2)) {
+  paintCircle(mousePos.x, mousePos.y, 0.15, MaterialId.FIRE);
+}</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Why Initialisation Order Matters</summary>
+    <div class="panel">
+      <p>Material and reaction registration mutates the active engine singleton, so both calls must happen inside <code>gameInit()</code> after the grid exists.</p>
+      <pre><code>function gameInit() {
+  initGranularEngine({ /* ... */ });
+  GUNPOWDER_ID = registerMaterial({ /* ... */ });
+  registerReaction(/* ... */);
+}</code></pre>
+    </div>
+  </details>
+</aside>
+
+<script src="../docs/lib/littlejs.min.js"></script>
+<script type="module">
+import {
+  initGranularEngine,
+  updateGranularEngine,
+  renderGranularEngine,
+  paintCircle,
+  registerMaterial,
+  registerReaction,
+  Archetype,
+  MaterialId
+} from '../src/littleautomata.js';
+
+let GUNPOWDER_ID;
+
+function gameInit() {
+  initGranularEngine({
+    gridWidth: 320, gridHeight: 200, pixelsPerUnit: 16,
+    originX: -10, originY: -6.25
+  });
+
+  GUNPOWDER_ID = registerMaterial({
+    id: 9,
+    name: 'Gunpowder',
+    archetype: Archetype.FALLING_SOLID,
+    density: 1300,
+    friction: 0.6,
+    flammability: 0.9,
+    baseColours: [0xFF454545, 0xFF383838, 0xFF2D2D2D]
+  });
+
+  registerReaction(
+    MaterialId.FIRE,
+    GUNPOWDER_ID,
+    MaterialId.FIRE,
+    MaterialId.FIRE,
+    1.0,
+    40
+  );
+
+  paintCircle(0, -3, 8, MaterialId.STONE);
+  setCameraScale(48);
+}
+
+function gameUpdate() {
+  updateGranularEngine();
+  if (mouseIsDown(0)) paintCircle(mousePos.x, mousePos.y, 0.4, GUNPOWDER_ID);
+  if (mouseIsDown(2)) paintCircle(mousePos.x, mousePos.y, 0.15, MaterialId.FIRE);
+}
+
+function gameRenderPost() {
+  renderGranularEngine();
+}
+
+document.addEventListener('contextmenu', (event) => event.preventDefault());
+
+engineInit(gameInit, gameUpdate, () => {}, () => {}, gameRenderPost);
+</script>
+</body>
+</html>

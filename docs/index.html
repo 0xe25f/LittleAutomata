@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LittleAutomata &mdash; Granular Cellular Automata for LittleJS</title>
+<meta name="description" content="LittleAutomata is a zero-dependency, zero-garbage-collection granular cellular automata simulation plugin for the LittleJS 2D game engine: falling sand, flowing liquids, rising gases, fire, and chemical reactions.">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #05070c;
+    --bg-alt: #0b0e16;
+    --panel: #10141d;
+    --panel-border: #1e2430;
+    --text: #e8ecf4;
+    --text-dim: #9aa3b5;
+    --text-dimmer: #6b7385;
+    --accent: #5ec8ff;
+    --accent-soft: rgba(94, 200, 255, 0.12);
+    --sand: #d4a359;
+    --water: #2e72d2;
+    --fire: #ff5722;
+    --acid: #76ff03;
+    --radius: 12px;
+    --maxw: 1080px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, kbd {
+    font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  code {
+    background: rgba(255,255,255,0.08);
+    padding: 0.1em 0.4em;
+    border-radius: 5px;
+    font-size: 0.9em;
+  }
+  pre {
+    background: #0a0d13;
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  pre code { background: none; padding: 0; }
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .str { color: #c3e88d; }
+  .cm { color: #6b7385; font-style: italic; }
+  .num { color: #f78c6c; }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+
+  nav.top {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: rgba(5, 7, 12, 0.86);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--panel-border);
+  }
+  nav.top .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+  nav.top .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--text);
+  }
+  nav.top .brand img {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    display: block;
+  }
+  nav.top .brand span { color: var(--accent); }
+  nav.top .links { display: flex; gap: 18px; margin-left: auto; font-size: 14px; }
+  nav.top .links a { color: var(--text-dim); }
+  nav.top .links a:hover { color: var(--text); }
+
+  header.hero { padding: 76px 0 56px; text-align: center; }
+  header.hero .hero-logo {
+    display: block;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 18px;
+  }
+  header.hero h1 { font-size: 42px; margin: 0 0 14px; letter-spacing: -0.5px; }
+  header.hero h1 .accent { color: var(--accent); }
+  header.hero p.tagline { max-width: 620px; margin: 0 auto 30px; color: var(--text-dim); font-size: 17px; }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 9px;
+    font-size: 14.5px;
+    font-weight: 600;
+    border: 1px solid var(--panel-border);
+  }
+  .btn.primary { background: var(--accent); color: #05131f; border-color: var(--accent); }
+  .btn.primary:hover { background: #7ed2ff; text-decoration: none; }
+  .btn.ghost { background: var(--panel); color: var(--text); }
+  .btn.ghost:hover { background: #171c27; text-decoration: none; }
+
+  .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+  .badge {
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 999px;
+    padding: 4px 11px;
+  }
+
+  section { padding: 56px 0; border-top: 1px solid var(--panel-border); }
+  section.tight { padding-top: 40px; }
+  section h2 { font-size: 26px; margin: 0 0 8px; }
+  section p.lead { color: var(--text-dim); margin: 0 0 30px; max-width: 680px; }
+
+  .demo-frame-wrap {
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .demo-frame-wrap iframe { display: block; width: 100%; height: 560px; border: 0; }
+  .demo-caption { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 13px; color: var(--text-dimmer); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 15.5px; }
+  .card p { margin: 0; color: var(--text-dim); font-size: 13.5px; }
+  .card .icon { font-size: 20px; margin-bottom: 10px; display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--panel-border); }
+  th { color: var(--text-dimmer); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; }
+  td.swatch-cell { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 11px; height: 11px; border-radius: 3px; flex: none; border: 1px solid rgba(255,255,255,0.2); }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--panel-border); border-radius: var(--radius); }
+  .table-scroll table { min-width: 560px; }
+  .table-scroll th:first-child, .table-scroll td:first-child { padding-left: 16px; }
+
+  .arch-diagram {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--panel-border);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: 12.5px;
+    text-align: center;
+  }
+  .arch-diagram > div { background: var(--panel); padding: 14px 8px; color: var(--text-dim); }
+  .arch-diagram > div b { display: block; color: var(--text); font-size: 13px; margin-bottom: 3px; }
+
+  .api-group { margin-bottom: 26px; }
+  .api-group h3 { font-size: 15px; color: var(--accent); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .api-list { display: flex; flex-direction: column; gap: 10px; }
+  .api-item { background: var(--panel); border: 1px solid var(--panel-border); border-radius: 9px; padding: 12px 15px; }
+  .api-item code.sig { color: var(--text); font-size: 13.5px; }
+  .api-item p { margin: 6px 0 0; color: var(--text-dim); font-size: 13px; }
+
+  footer { padding: 40px 0 60px; color: var(--text-dimmer); font-size: 13px; text-align: center; }
+  footer a { color: var(--text-dim); }
+
+  @media (max-width: 640px) {
+    header.hero h1 { font-size: 32px; }
+    .demo-frame-wrap iframe { height: 420px; }
+    nav.top .links { gap: 12px; font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap">
+    <div class="brand">
+      <img src="./littleautomata.webp" width="28" height="28" alt="LittleAutomata logo">
+      Little<span>Automata</span>
+    </div>
+    <div class="links">
+      <a href="#demo">Demo</a>
+      <a href="#features">Features</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#materials">Materials</a>
+      <a href="#api">API</a>
+      <a href="https://github.com/0xe25f/LittleAutomata">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <img class="hero-logo" src="./littleautomata.webp" width="72" height="72" alt="LittleAutomata logo">
+    <h1>Granular Cellular Automata<br>for <span class="accent">LittleJS</span></h1>
+    <p class="tagline">
+      Falling sand, flowing liquids, rising gases, fire, and chemical reactions &mdash; a
+      zero-dependency, zero-garbage-collection simulation plugin that drops straight into a
+      LittleJS game.
+    </p>
+    <div class="cta-row">
+      <a class="btn primary" href="./demo.html">&#9654; Play the Demo</a>
+      <a class="btn ghost" href="https://github.com/0xe25f/LittleAutomata">View on GitHub</a>
+    </div>
+    <div class="badges">
+      <span class="badge">Zero Dependencies</span>
+      <span class="badge">Zero Runtime Allocation</span>
+      <span class="badge">Single File</span>
+      <span class="badge">Full JSDoc / TypeScript Types</span>
+      <span class="badge">MIT Licence</span>
+    </div>
+  </div>
+</header>
+
+<section id="demo" class="tight">
+  <div class="wrap">
+    <h2>Try It Right Here</h2>
+    <p class="lead">
+      The embedded sandbox below is the exact same file shipped in the repository &mdash; paint
+      materials, punch a crater with an explosion, and walk a small character across the terrain.
+    </p>
+    <div class="demo-frame-wrap">
+      <iframe src="./demo.html" loading="lazy" title="LittleAutomata playable demo"></iframe>
+    </div>
+    <div class="demo-caption">
+      <span>Left click: paint &middot; Right click: explode &middot; WASD/Arrows: move &middot; Space: jump</span>
+      <a href="./demo.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <h2>What It Does</h2>
+    <p class="lead">A compact but complete simulation core built around a strict 4-byte-per-cell memory layout and chunk-level activity culling.</p>
+    <div class="grid">
+      <div class="card">
+        <span class="icon">&#9881;&#65039;</span>
+        <h3>Zero-Allocation Hot Path</h3>
+        <p>Simulation, rendering upload, and collision queries run entirely on pre-allocated typed arrays &mdash; no per-frame objects, arrays, or closures.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#128465;&#65039;</span>
+        <h3>Chunk Sleep Culling</h3>
+        <p>The world is split into 64&times;64 cell chunks that fall dormant after two quiet sweeps, skipping simulation and GPU upload entirely.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#129514;</span>
+        <h3>Five Physical Archetypes</h3>
+        <p>Immovable solids, falling solids, sliding liquids, rising gases, and propagating energy, each with density-aware displacement.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#9889;</span>
+        <h3>O(1) Reaction Matrix</h3>
+        <p>A flat 256&times;256 lookup table resolves material transformations, probabilities, and yields in constant time.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#127939;</span>
+        <h3>LittleJS Physics Bridge</h3>
+        <p>EngineObjects gain ground support, surface friction, Archimedes buoyancy, and viscous drag when touching the grid.</p>
+      </div>
+      <div class="card">
+        <span class="icon">&#128190;</span>
+        <h3>Lossless RLE Save/Load</h3>
+        <p>The entire world compresses into a compact binary stream for instant save, load, and network replication.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="wrap">
+    <h2>Quick Start</h2>
+    <p class="lead">Load LittleJS as a classic global script, then load LittleAutomata as an ES module &mdash; it reads LittleJS's globals directly, no bundler required.</p>
+    <pre><code><span class="cm">&lt;!-- index.html --&gt;</span>
+<span class="kw">&lt;script</span> src=<span class="str">"littlejs.js"</span><span class="kw">&gt;&lt;/script&gt;</span>
+<span class="kw">&lt;script</span> type=<span class="str">"module"</span><span class="kw">&gt;</span>
+<span class="kw">import</span> {
+  initGranularEngine, updateGranularEngine, renderGranularEngine,
+  paintCircle, createExplosion, MaterialId
+} <span class="kw">from</span> <span class="str">'./littleautomata.js'</span>;
+
+<span class="kw">function</span> <span class="fn">gameInit</span>() {
+  <span class="fn">initGranularEngine</span>({
+    gridWidth: <span class="num">512</span>, gridHeight: <span class="num">256</span>, pixelsPerUnit: <span class="num">16</span>
+  });
+  <span class="fn">paintCircle</span>(<span class="num">0</span>, <span class="num">-2</span>, <span class="num">6</span>, MaterialId.STONE);
+  <span class="fn">paintCircle</span>(<span class="num">0</span>, <span class="num">4</span>, <span class="num">3</span>, MaterialId.SAND);
+}
+
+<span class="kw">function</span> <span class="fn">gameUpdate</span>() {
+  <span class="fn">updateGranularEngine</span>();
+  <span class="kw">if</span> (mouseIsDown(<span class="num">0</span>)) <span class="fn">paintCircle</span>(mousePos.x, mousePos.y, <span class="num">0.5</span>, MaterialId.SAND);
+  <span class="kw">if</span> (mouseWasPressed(<span class="num">1</span>)) <span class="fn">createExplosion</span>(mousePos.x, mousePos.y, <span class="num">2.0</span>, <span class="num">1.5</span>);
+}
+
+<span class="fn">engineInit</span>(gameInit, gameUpdate, () =&gt; {}, () =&gt; {}, <span class="fn">renderGranularEngine</span>);
+<span class="kw">&lt;/script&gt;</span></code></pre>
+  </div>
+</section>
+
+<section id="architecture">
+  <div class="wrap">
+    <h2>Memory Layout</h2>
+    <p class="lead">Every cell is exactly 4 contiguous bytes, packed so a whole cell can be copied or compared with a single 32-bit read.</p>
+    <div class="arch-diagram">
+      <div><b>Byte 0</b>materialId<br>Uint8, 0&ndash;255</div>
+      <div><b>Byte 1</b>life<br>Uint8, timer / durability</div>
+      <div><b>Byte 2</b>vx<br>Int8, lateral bias</div>
+      <div><b>Byte 3</b>flags<br>updated &middot; sleeping &middot; variant</div>
+    </div>
+    <p class="lead" style="margin-top:22px;">
+      Two of these buffers are ping-ponged each sub-step (<code>GranularGridBuffer</code>), and a
+      <code>ChunkManager</code> tracks per-64&times;64 activity, sleep counters, and dirty render
+      rectangles &mdash; see the source for the full design rationale.
+    </p>
+  </div>
+</section>
+
+<section id="materials">
+  <div class="wrap">
+    <h2>Built-In Materials</h2>
+    <p class="lead">Nine materials are registered automatically; custom ones register at any free id from 9&ndash;255 via <code>registerMaterial()</code>.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Material</th><th>Archetype</th><th>Density</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#2b2b2b"></span>Bedrock</td><td>Immovable solid</td><td>100,000</td><td>Indestructible in normal play</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#70737c"></span>Stone</td><td>Immovable solid</td><td>2,700</td><td>Dissolved by acid, destroyed by strong blasts</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#d4a359"></span>Sand</td><td>Falling solid</td><td>1,600</td><td>Piles at a natural angle of repose</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#2e72d2"></span>Water</td><td>Sliding liquid</td><td>1,000</td><td>Dispersion rate 4 &mdash; spreads far</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#3b3426"></span>Oil</td><td>Sliding liquid</td><td>800</td><td>Floats on water, highly flammable</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#ff5722"></span>Fire</td><td>Propagating energy</td><td>0</td><td>30-step lifetime, decays into Smoke, emits light</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#616161"></span>Smoke</td><td>Rising gas</td><td>0.5</td><td>60-step lifetime, decays into Air</td></tr>
+          <tr><td class="swatch-cell"><span class="dot" style="background:#76ff03"></span>Acid</td><td>Sliding liquid</td><td>1,200</td><td>Dissolves Stone and Sand into Smoke</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="api">
+  <div class="wrap">
+    <h2>API Reference</h2>
+    <p class="lead">The full public surface, every member documented with JSDoc in the source for inline IDE intellisense. See <a href="https://github.com/0xe25f/LittleAutomata/blob/main/README.md">README.md</a> for extended examples.</p>
+
+    <div class="api-group">
+      <h3>Lifecycle</h3>
+      <div class="api-list">
+        <div class="api-item"><code class="sig">initGranularEngine(config): GranularEngine</code><p>Allocates buffers, registers default materials/reactions, and initialises the renderer.</p></div>
+        <div class="api-item"><code class="sig">updateGranularEngine(): void</code><p>Advances the simulation by the configured number of sub-steps.</p></div>
+        <div class="api-item"><code class="sig">renderGranularEngine(): void</code><p>Uploads dirty chunk regions and draws the terrain aligned to the LittleJS camera.</p></div>
+      </div>
+    </div>
+
+    <div class="api-group">
+      <h3>World Manipulation</h3>
+      <div class="api-list">
+        <div class="api-item"><code class="sig">paintCircle(worldX, worldY, radiusWorld, materialId): void</code><p>Stamps a filled circle of a material into the grid.</p></div>
+        <div class="api-item"><code class="sig">paintLine(x0, y0, x1, y1, radiusWorld, materialId): void</code><p>Sweeps a thick brush stroke between two world points.</p></div>
+        <div class="api-item"><code class="sig">createExplosion(worldX, worldY, radiusWorld, power = 1.0): void</code><p>Carves a crater, propels debris, ignites flammables, pushes nearby EngineObjects, and triggers camera shake.</p></div>
+        <div class="api-item"><code class="sig">sampleWorld(worldX, worldY): object</code><p>Reads material and cell state at a coordinate (reused result object, zero allocation).</p></div>
+        <div class="api-item"><code class="sig">raycastWorld(x0, y0, x1, y1): object</code><p>Casts a ray through the grid, returning the first hit cell and surface normal.</p></div>
+      </div>
+    </div>
+
+    <div class="api-group">
+      <h3>Materials &amp; Reactions</h3>
+      <div class="api-list">
+        <div class="api-item"><code class="sig">registerMaterial(config): number</code><p>Registers a custom material definition and returns its id.</p></div>
+        <div class="api-item"><code class="sig">registerReaction(actorId, targetId, yieldActor, yieldTarget, probability, yieldLife?): void</code><p>Registers a constant-time material interaction rule.</p></div>
+      </div>
+    </div>
+
+    <div class="api-group">
+      <h3>Persistence</h3>
+      <div class="api-list">
+        <div class="api-item"><code class="sig">serializeGrid(): Uint8Array</code><p>Compresses the world into a lossless RLE binary stream.</p></div>
+        <div class="api-item"><code class="sig">deserializeGrid(bytes): boolean</code><p>Restores world state from a stream, resizing and waking all chunks as needed.</p></div>
+      </div>
+    </div>
+
+    <div class="api-group">
+      <h3>Classes</h3>
+      <div class="api-list">
+        <div class="api-item"><code class="sig">GranularEngine</code><p>The orchestrator instance exposed as the <code>granularEngine</code> singleton.</p></div>
+        <div class="api-item"><code class="sig">GranularPhysicsBridge.resolveEntityCollision(entity)</code><p>Resolves ground contact, friction, buoyancy, and drag for a LittleJS EngineObject.</p></div>
+        <div class="api-item"><code class="sig">GranularGridBuffer, ChunkManager, MaterialRegistry, ReactionMatrix</code><p>Lower-level building blocks available for advanced or standalone use (see source JSDoc).</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    MIT Licence &middot; Built for the <a href="https://github.com/KilledByAPixel/LittleJS">LittleJS</a> engine &middot;
+    <a href="https://github.com/0xe25f/LittleAutomata">Source on GitHub</a>
+  </div>
+</footer>
+
+</body>
+</html>

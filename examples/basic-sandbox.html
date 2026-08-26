@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<title>LittleAutomata &mdash; Basic Sandbox Example</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html, body { margin: 0; height: 100%; background: #05070c; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  #help {
+    position: fixed; top: 10px; left: 10px; z-index: 5;
+    font-size: 13px; color: #cfd6e4;
+    background: rgba(16, 20, 29, 0.85); border: 1px solid #232a38;
+    border-radius: 8px; padding: 8px 12px;
+  }
+  #guide {
+    position: fixed; top: 10px; right: 10px; z-index: 5;
+    width: min(420px, calc(100vw - 20px));
+    max-height: calc(100vh - 20px);
+    overflow: auto;
+    background: rgba(16, 20, 29, 0.92);
+    border: 1px solid #232a38;
+    border-radius: 10px;
+    color: #cfd6e4;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  #guide h2 {
+    margin: 0;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #e8ecf4;
+    border-bottom: 1px solid #232a38;
+  }
+  details.accordion {
+    border-bottom: 1px solid #232a38;
+  }
+  details.accordion summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-weight: 600;
+    color: #e8ecf4;
+    list-style: none;
+  }
+  details.accordion summary::-webkit-details-marker { display: none; }
+  details.accordion summary::before {
+    content: "▸ ";
+    color: #5ec8ff;
+  }
+  details.accordion[open] summary::before { content: "▾ "; }
+  details.accordion .panel {
+    padding: 0 14px 12px;
+  }
+  details.accordion p {
+    margin: 0 0 8px;
+    color: #9aa3b5;
+  }
+  pre {
+    margin: 0;
+    padding: 10px 12px;
+    background: #0a0d13;
+    border: 1px solid #232a38;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  code { font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; }
+</style>
+</head>
+<body>
+<div id="help">Left click: pour sand &middot; Right click: explode</div>
+
+<aside id="guide">
+  <h2>Basic Sandbox Walkthrough</h2>
+
+  <details class="accordion" open>
+    <summary>Initialise the Engine</summary>
+    <div class="panel">
+      <p>Call <code>initGranularEngine()</code> once during <code>gameInit()</code> to allocate the grid, register default materials, and prepare the renderer.</p>
+      <pre><code>initGranularEngine({
+  gridWidth: 512,
+  gridHeight: 256,
+  pixelsPerUnit: 16,
+  originX: -16,
+  originY: -8,
+  subSteps: 1
+});</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Paint Starting Terrain</summary>
+    <div class="panel">
+      <p>Use <code>paintCircle()</code> to stamp materials in world units. Material ID 2 is Stone and 3 is Sand.</p>
+      <pre><code>paintCircle(0, -2, 6, 2); // Stone base
+paintCircle(0, 4, 3, 3);  // Sand mound</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Step and Render Each Frame</summary>
+    <div class="panel">
+      <p>Advance the simulation in <code>gameUpdate()</code> and draw terrain in <code>gameRenderPost()</code>.</p>
+      <pre><code>function gameUpdate() {
+  updateGranularEngine();
+}
+
+function gameRenderPost() {
+  renderGranularEngine();
+}</code></pre>
+    </div>
+  </details>
+
+  <details class="accordion">
+    <summary>Mouse Painting and Explosions</summary>
+    <div class="panel">
+      <p>Left click pours sand at the cursor; right click triggers a crater via <code>createExplosion()</code>.</p>
+      <pre><code>if (mouseIsDown(0)) {
+  paintCircle(mousePos.x, mousePos.y, 0.5, 3);
+}
+if (mouseWasPressed(2)) {
+  createExplosion(mousePos.x, mousePos.y, 2.0, 1.5);
+}</code></pre>
+    </div>
+  </details>
+</aside>
+
+<script src="../docs/lib/littlejs.min.js"></script>
+<script type="module">
+import {
+  initGranularEngine,
+  updateGranularEngine,
+  renderGranularEngine,
+  paintCircle,
+  createExplosion
+} from '../src/littleautomata.js';
+
+function gameInit() {
+  initGranularEngine({
+    gridWidth: 512,
+    gridHeight: 256,
+    pixelsPerUnit: 16,
+    originX: -16,
+    originY: -8,
+    subSteps: 1
+  });
+
+  paintCircle(0, -2, 6, 2);
+  paintCircle(0, 4, 3, 3);
+
+  setCameraScale(48);
+}
+
+function gameUpdate() {
+  updateGranularEngine();
+
+  if (mouseIsDown(0)) {
+    paintCircle(mousePos.x, mousePos.y, 0.5, 3);
+  }
+
+  if (mouseWasPressed(2)) {
+    createExplosion(mousePos.x, mousePos.y, 2.0, 1.5);
+  }
+}
+
+function gameRenderPost() {
+  renderGranularEngine();
+}
+
+document.addEventListener('contextmenu', (event) => event.preventDefault());
+
+engineInit(gameInit, gameUpdate, () => {}, () => {}, gameRenderPost);
+</script>
+</body>
+</html>
